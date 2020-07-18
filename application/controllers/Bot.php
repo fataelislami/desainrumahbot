@@ -5,16 +5,13 @@ require_once('MessageBuilder.php');
 
 class Bot extends MY_Controller {
 
-
      public function __construct()
           {
             parent::__construct();
             //Codeigniter : Write Less Do More
       $this->load->model(array('Dbs'));
 
-
           }
-
 
   public function webhook()
   {
@@ -42,7 +39,7 @@ class Bot extends MY_Controller {
                 $dataInsert=array(
                   'id_users'=>$userId,
                   'nama'=>$nama,
-                  'map'=>'standby',
+                  'map'=>'belum order',
                   'counter'=>0
                 );
                 $sql=$this->Dbs->insert($dataInsert,'users');
@@ -57,6 +54,7 @@ class Bot extends MY_Controller {
               $dataUser=$this->Dbs->getdata(array('id_users'=>$userId),'users')->row();
                       // Order dan simpan ke database
             if(substr($inputMessage,0,5) == "ORDER"){
+              //explode = (separator,string,limit)
               $explodeInput=explode(" ",$inputMessage);//pecah input berdasarkan spasi
               $id_rumah=$explodeInput[1];
               $dataInsert=array(
@@ -85,9 +83,10 @@ class Bot extends MY_Controller {
             // Map Desain
             if(substr($dataUser->map,0,6)=='desain'){
                   if($inputMessage == 'RESET'){
-                    $dataUpdate=array('map'=>'standby','counter'=>0,'request'=>NULL);
+                    $dataUpdate=array('map'=>'belum order','counter'=>0,'request'=>NULL);
                     $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                     if($sql){
+                      //explode = (separator,string,limit)
                       $explodeRequest=explode("#",$dataUser->request);
                       $pre=array($messageBuilder->text("Bot berhasil di reset"));
                       $output=$this->reply($replyToken,$pre);
@@ -288,7 +287,7 @@ class Bot extends MY_Controller {
                       array_push($messages,$msg1,$msg2);
                       $output=$this->reply($replyToken,$messages);
                       // RESET
-                      $dataUpdate=array('map'=>'standby','counter'=>0,'request'=>NULL);
+                      $dataUpdate=array('map'=>'belum order','counter'=>0,'request'=>NULL);
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                     }else{
                       $counter=1;

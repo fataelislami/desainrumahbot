@@ -2,7 +2,7 @@
 
 class MessageBuilder{
     //digunakan untuk membalas pesan dengan berbagai type
-    //KostLab
+ 
 
 
     public function text($string){

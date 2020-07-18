@@ -33,6 +33,4 @@ class Dbs extends CI_Model{
       }
   }
 
-
-
 }
