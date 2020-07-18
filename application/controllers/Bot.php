@@ -65,7 +65,7 @@ class Bot extends MY_Controller {
               );
               $sql=$this->Dbs->insert($dataInsert,'pesanan');
               if($sql){
-                $pre=array($messageBuilder->text("Pesanan Berhasil dilakukan, Silakan lakukan pembayaran ke no : 0897XXXXX"));
+                $pre=array($messageBuilder->text("Pesanan Berhasil dilakukan, Silakan lakukan pembayaran ke no : 08997148238"));
                 $output=$this->reply($replyToken,$pre);
               }else{
                 $pre=array($messageBuilder->text("Pesanan gagal di proses"));
@@ -77,7 +77,8 @@ class Bot extends MY_Controller {
               $dataUpdate=array('map'=>'desain','counter'=>$counter);
               $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
               if($sql){
-                $pre=array($messageBuilder->text("Mau beli rumah tipe jenis apa nih?"));
+                $pre=array($messageBuilder->text("Mau beli rumah tipe jenis apa nih?
+                                                \nOpsi: \n1. Tipe 36"));
                 $output=$this->reply($replyToken,$pre);
               }
             }
