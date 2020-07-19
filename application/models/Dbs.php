@@ -23,6 +23,12 @@ class Dbs extends CI_Model{
     return $db;
   }
 
+  function getPesanan($id_pesanan){
+    $dml="SELECT * FROM `pembayaran` WHERE id_pesanan = $id_pesanan ";
+    $query = $this->db->query($dml);
+    return $query->row();
+  }
+
   function update($where,$data,$to){
     $this->db->where($where);
     $db=$this->db->update($to,$data);
@@ -32,5 +38,16 @@ class Dbs extends CI_Model{
       return false;
       }
   }
+
+  function delete($where,$value,$table){
+    $this->db->where($where,$value);
+    $this->db->delete($table);
+  }
+
+  // function getType(){
+  //   $dml = "SELECT MIN(id_rumah) AS id, tipe FROM rumah GROUP BY tipe";
+  //   $query = $this->db->query($dml);
+  //   return $query->result();
+  // }
 
 }

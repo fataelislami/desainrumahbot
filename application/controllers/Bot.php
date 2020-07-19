@@ -16,8 +16,8 @@ class Bot extends MY_Controller {
   public function webhook()
   {
     //Konfigurasi Chatbot
-    $channelAccessToken = '7uT2ARjrbDNeK9RAqnBFiU1e7K81EYyg0WsLP1m6dFn/hAPvLftv7ckLAJXyEJ6h50omkzJy38a9gXJo6jwowWXQ36PCWCQO6mPI1hh0JnLiY3tXPqnRz0Bdmm4QuT4PYWssAUf7TlcaDI/Ked41EwdB04t89/1O/w1cDnyilFU=';
-    $channelSecret = '676fd251b52ba4464be4d8518d9b38ca';//sesuaikan
+    $channelAccessToken = '5VGsqVGyS7KRTdiQYIbJYJe0ITrXM/A0yU6jRMtbV1dJUnk4KViJi8VIkpJVaiYVcBThRIZWtdJm29ZroBHxUMuVAlQYpRjsUVRziSXtJj+3TjCosynuUm0ZLFheH5XHpi2U1rGygMOFpvLDiswwxQdB04t89/1O/w1cDnyilFU=';
+    $channelSecret = 'd082b5a95dff36484507bc48e76b8671';//sesuaikan
     //Konfigurasi Chatbot END
 
     $client = new LINEBotTiny($channelAccessToken, $channelSecret);
@@ -34,26 +34,112 @@ class Bot extends MY_Controller {
         $inputMessage = strtoupper($message['text']);
         $namapanggilan=$pecahnama[0];
         $event=$client->parseEvents() [0];
+        $dataUser=$this->Dbs->getdata(array('id_users'=>$userId),'users')->row();
+
               if ($event['type'] == 'follow')//Yang bot lakukan pertama kali saat di add oleh user
               {
                 $dataInsert=array(
                   'id_users'=>$userId,
                   'nama'=>$nama,
-                  'map'=>'belum order',
+                  'map'=>'registrasi',
                   'counter'=>0
                 );
                 $sql=$this->Dbs->insert($dataInsert,'users');
                 if($sql){
-                  $pre=array($messageBuilder->text("Daftar berhasil"));
-                  $output=$this->reply($replyToken,$pre);
+                  $messages=[];
+                  $msg1=$messageBuilder->text("Daftar Berhasil");
+                  $msg2=$messageBuilder->text("Sebelum masuk ke pemesanan kamu harap input email ya");
+                  $msg3=$messageBuilder->text("Masukkan Email mu dengan membalas pesan ini ");
+                  array_push($messages,$msg1,$msg2,$msg3);
+                  $output=$this->reply($replyToken,$messages);
+                  // $pre=array($messageBuilder->text("Daftar berhasil"));
+                  // $output=$this->reply($replyToken,$pre);
                 }else{
                   $pre=array($messageBuilder->text("Daftar gagal"));
                   $output=$this->reply($replyToken,$pre);
                 }
               }
-              $dataUser=$this->Dbs->getdata(array('id_users'=>$userId),'users')->row();
+           
+            if($dataUser->map == 'registrasi' && $dataUser->counter == '0'){
+                if(preg_match('/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b/si', $inputMessage)){
+                    $dataUpdate = array(
+                      'email' => $message['text'],
+                      'map'   => 'registrasi_tlp',
+                      'counter' => 1  
+                    );
+                    // $sql=$this->Dbs->insert($dataInsert,'users');
+                    $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
+                    if ($sql) {
+                      $pre=array($messageBuilder->text("Email kamu sudah didaftarkan, sekarang masukkan no telpon kamu"));
+                      $output=$this->reply($replyToken,$pre);
+                    }
+                }else{
+                  $pre=array($messageBuilder->text("Email gagal didaftarkan"));
+                  $output=$this->reply($replyToken,$pre);
+                }
+            }
+            if($dataUser->map == 'registrasi_tlp' && $dataUser->counter == '1'){
+              if (is_numeric($message['text'])) {
+                $dataUpdate = array(
+                      'no_telepon' => $message['text'],
+                      'map'   => 'belum order',
+                      'counter' => 0  
+                    );
+                $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
+                if ($sql) {
+                  $messages=[];
+                  $msg1=$messageBuilder->text("No Telp Berhasil Didaftarakan, Sekarang kamu bisa mulai order dengan tekan tombol dibawah ini");
+                  $msg2=array (
+                          'type' => 'flex',
+                          'altText' => 'Flex Message',
+                          'contents' => 
+                          array (
+                            'type' => 'bubble',
+                            'direction' => 'ltr',
+                            'header' => 
+                            array (
+                              'type' => 'box',
+                              'layout' => 'vertical',
+                              'contents' => 
+                              array (
+                                0 => 
+                                array (
+                                  'type' => 'text',
+                                  'text' => 'Tekan Tombol Di Bawah Ini',
+                                  'align' => 'center',
+                                ),
+                              ),
+                            ),
+                            'footer' => 
+                            array (
+                              'type' => 'box',
+                              'layout' => 'horizontal',
+                              'contents' => 
+                              array (
+                                0 => 
+                                array (
+                                  'type' => 'button',
+                                  'action' => 
+                                  array (
+                                    'type' => 'message',
+                                    'label' => 'MULAI',
+                                    'text' => 'MULAI',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
+                }
+              }else{
+                $pre=array($messageBuilder->text("No telpon gagal didaftarkan"));
+                  $output=$this->reply($replyToken,$pre);
+              }
+            }
                       // Order dan simpan ke database
-            if(substr($inputMessage,0,5) == "ORDER"){
+            if(substr($inputMessage,0,5) == "ORDER"){ 
               //explode = (separator,string,limit)
               $explodeInput=explode(" ",$inputMessage);//pecah input berdasarkan spasi
               $id_rumah=$explodeInput[1];
@@ -63,21 +149,261 @@ class Bot extends MY_Controller {
               );
               $sql=$this->Dbs->insert($dataInsert,'pesanan');
               if($sql){
-                $pre=array($messageBuilder->text("Pesanan Berhasil dilakukan, Silakan lakukan pembayaran ke no : 08997148238"));
-                $output=$this->reply($replyToken,$pre);
+                $dataPesanan = $this->Dbs->getdata($dataInsert,'pesanan')->row();
+                $dataInsert = array(
+                  'id_pesanan' => $dataPesanan->id_pesanan,
+                  'status_bayar' => 'belum bayar'
+                );
+                $sql=$this->Dbs->insert($dataInsert,'pembayaran');
+                if ($sql) {
+                  $pesan = "sudah bayar ".$id_rumah;
+                  $messages=[];
+                  $msg1=$messageBuilder->text("Pesanan Berhasil dilakukan, Silahkan lakukan pembayaran Uang DP ke no : 08997148238, Jika sudah membayar Uang DP silahkan klik Sudah Bayar DP");
+                  $msg2=array (
+                          'type' => 'flex',
+                          'altText' => 'Flex Message',
+                          'contents' => 
+                          array (
+                            'type' => 'bubble',
+                            'direction' => 'ltr',
+                            'header' => 
+                            array (
+                              'type' => 'box',
+                              'layout' => 'vertical',
+                              'contents' => 
+                              array (
+                                0 => 
+                                array (
+                                  'type' => 'text',
+                                  'text' => 'Konfirmasi Pembayaran',
+                                  'align' => 'center',
+                                ),
+                              ),
+                            ),
+                            'footer' => 
+                            array (
+                              'type' => 'box',
+                              'layout' => 'horizontal',
+                              'contents' => 
+                              array (
+                                0 => 
+                                array (
+                                  'type' => 'button',
+                                  'action' => 
+                                  array (
+                                    'type' => 'message',
+                                    'label' => 'SUDAH BAYAR DP',
+                                    'text' => $pesan,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
+                  // $pesan = "sudah bayar ".$id_rumah;
+                  // $pre=array($messageBuilder->text("Pesanan Berhasil dilakukan, Silakan lakukan pembayaran ke no : 08997148238 ketik ".$pesan));
+                  // $output=$this->reply($replyToken,$pre);
+                }
+                
               }else{
                 $pre=array($messageBuilder->text("Pesanan gagal di proses"));
                 $output=$this->reply($replyToken,$pre);
               }
             }
+
+            if (substr($inputMessage,0,11) == 'SUDAH BAYAR') {
+                $explodeInput=explode(" ",$inputMessage);
+                $id_rumah=$explodeInput[2];
+                $dataWhere = array(
+                  'id_users'=> $userId,
+                  'id_rumah'=> $id_rumah
+                );
+                $dataPesanan = $this->Dbs->getdata($dataWhere,'pesanan')->row();
+                $id_pesanan = $dataPesanan->id_pesanan;
+                $dataBayar = $this->Dbs->getPesanan($id_pesanan);
+                if ($dataBayar->status_bayar == 'sudah bayar') {
+                  $pre=array($messageBuilder->text("Anda sudah membayar desain rumah, untuk konsultasi lanjutan bisa hubungi kontak : 08997148238"));
+                $output=$this->reply($replyToken,$pre);
+                }else{
+                  $pre=array($messageBuilder->text("Anda belum membayar pemesanan desain rumah"));
+                $output=$this->reply($replyToken,$pre);
+                }
+            }
+
+
             if($inputMessage == 'MULAI'){
               $counter=1;
               $dataUpdate=array('map'=>'desain','counter'=>$counter);
               $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
               if($sql){
-                $pre=array($messageBuilder->text("Mau beli rumah tipe jenis apa nih?
-                                                \nOpsi: \n1. Tipe 36"));
-                $output=$this->reply($replyToken,$pre);
+                $messages=[];
+                  $msg1=$messageBuilder->text("Mau beli rumah tipe jenis apa nih?");
+                  $msg2=array (
+                        'type' => 'flex',
+                        'altText' => 'Flex Message',
+                        'contents' => 
+                        array (
+                          'type' => 'carousel',
+                          'contents' => 
+                          array (
+                            0 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 36',
+                                      'text' => 'Tipe 36',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            1 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 45',
+                                      'text' => 'Tipe 45',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            2 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 60',
+                                      'text' => 'Tipe 60',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            3 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 70',
+                                      'text' => 'Tipe 70',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
+                // $pre=array($messageBuilder->text("Mau beli rumah tipe jenis apa nih?
+                //                                 \nOpsi: \n1. Tipe 36"));
+                // $output=$this->reply($replyToken,$pre);
               }
             }
             // Map Desain
@@ -101,8 +427,97 @@ class Bot extends MY_Controller {
                       $dataUpdate=array('map'=>'desain','counter'=>$counter,'request'=>$request);
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                       if($sql){
-                        $pre=array($messageBuilder->text("Jumlah lantainya berapa?"));
-                        $output=$this->reply($replyToken,$pre);
+                        $messages=[];
+                  $msg1=$messageBuilder->text("Jumlah Lantainya Berapa?");
+                  $msg2=array (
+                        'type' => 'flex',
+                        'altText' => 'Flex Message',
+                        'contents' => 
+                        array (
+                          'type' => 'carousel',
+                          'contents' => 
+                          array (
+                            0 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Lantai 1',
+                                      'text' => 'Lantai 1',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            1 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Lantai 2',
+                                      'text' => 'Lantai 2',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
+                        // $pre=array($messageBuilder->text("Jumlah lantainya berapa?"));
+                        // $output=$this->reply($replyToken,$pre);
                       }
                     }else{
                       $pre=array($messageBuilder->text("Masukan tidak diketahui, ketik TIPE [nomor]"));
@@ -117,8 +532,134 @@ class Bot extends MY_Controller {
                       $dataUpdate=array('map'=>'desain','counter'=>$counter,'request'=>$request);
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                       if($sql){
-                        $pre=array($messageBuilder->text("Mau style arsitektur seperti apa?"));
-                        $output=$this->reply($replyToken,$pre);
+                        $messages=[];
+                        $msg1=$messageBuilder->text("Mau style rumah seperti apa?");
+                        $msg2=array (
+                              'type' => 'flex',
+                              'altText' => 'Flex Message',
+                              'contents' => 
+                              array (
+                                'type' => 'carousel',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'bubble',
+                                    'direction' => 'ltr',
+                                    'header' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'vertical',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'text',
+                                          'text' => 'Rumah',
+                                          'align' => 'center',
+                                        ),
+                                      ),
+                                    ),
+                                    'footer' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'horizontal',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'button',
+                                          'action' => 
+                                          array (
+                                            'type' => 'message',
+                                            'label' => 'Modern',
+                                            'text' => 'Modern',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  1 => 
+                                  array (
+                                    'type' => 'bubble',
+                                    'direction' => 'ltr',
+                                    'header' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'vertical',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'text',
+                                          'text' => 'Rumah',
+                                          'align' => 'center',
+                                        ),
+                                      ),
+                                    ),
+                                    'footer' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'horizontal',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'button',
+                                          'action' => 
+                                          array (
+                                            'type' => 'message',
+                                            'label' => 'Tropis',
+                                            'text' => 'Tropis',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  2 => 
+                                  array (
+                                    'type' => 'bubble',
+                                    'direction' => 'ltr',
+                                    'header' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'vertical',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'text',
+                                          'text' => 'Rumah',
+                                          'align' => 'center',
+                                        ),
+                                      ),
+                                    ),
+                                    'footer' => 
+                                    array (
+                                      'type' => 'box',
+                                      'layout' => 'horizontal',
+                                      'contents' => 
+                                      array (
+                                        0 => 
+                                        array (
+                                          'type' => 'button',
+                                          'action' => 
+                                          array (
+                                            'type' => 'message',
+                                            'label' => 'Modern Tropis',
+                                            'text' => 'Modern Tropis',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                        array_push($messages,$msg1,$msg2);
+                        $output=$this->reply($replyToken,$messages);
+                        // $pre=array($messageBuilder->text("Mau style arsitektur seperti apa?"));
+                        // $output=$this->reply($replyToken,$pre);
                       }
                   }else 
                   // Q3
@@ -128,8 +669,60 @@ class Bot extends MY_Controller {
                       $dataUpdate=array('map'=>'desain','counter'=>$counter,'request'=>$request);
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                       if($sql){
-                        $pre=array($messageBuilder->text("Luas bangunannya berapa?"));
-                        $output=$this->reply($replyToken,$pre);
+                        $messages=[];
+                  $msg1=$messageBuilder->text("Luas Bangunan?");
+                  $msg2=array (
+                        'type' => 'flex',
+                        'altText' => 'Flex Message',
+                        'contents' => 
+                        array (
+                          'type' => 'carousel',
+                          'contents' => 
+                          array (
+                            0 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Luas Bangunan',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => '1-100 m/2',
+                                      'text' => '1-100 m/2',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
+                        // $pre=array($messageBuilder->text("Luas bangunannya berapa?"));
+                        // $output=$this->reply($replyToken,$pre);
                       }
                   }else 
                   // Q4 KONFIRMASI
@@ -140,8 +733,51 @@ class Bot extends MY_Controller {
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                       if($sql){
                         $explodeRequest=explode("#",$dataUser->request);
-                        $pre=array($messageBuilder->text("Bot konfirmasi dulu ya, untuk pesanan desain kamu adalah : \nTipe Rumah: ".$explodeRequest[2]."\nJumlah Lantai: ".$explodeRequest[1]."\nStyle Arsitektur: ".$explodeRequest[0]."\nLuas Bangunan: ".$message['text']));
-                        $output=$this->reply($replyToken,$pre);
+                        $messages=[];
+                        $msg1=$messageBuilder->text("Bot konfirmasi dulu ya, untuk pesanan desain kamu adalah : \nTipe Rumah: ".$explodeRequest[2]."\nJumlah Lantai: ".$explodeRequest[1]."\nStyle Arsitektur: ".$explodeRequest[0]."\nLuas Bangunan: ".$message['text']." \n Klik <Benar> jika anda sudah setuju dengan inputan portofolio diatas :)");
+                        $msg2=array (
+                                'type' => 'flex',
+                                'altText' => 'Flex Message',
+                                'contents' => 
+                                array (
+                                  'type' => 'bubble',
+                                  'direction' => 'ltr',
+                                  'header' => 
+                                  array (
+                                    'type' => 'box',
+                                    'layout' => 'vertical',
+                                    'contents' => 
+                                    array (
+                                      0 => 
+                                      array (
+                                        'type' => 'text',
+                                        'text' => '-',
+                                        'align' => 'center',
+                                      ),
+                                    ),
+                                  ),
+                                  'footer' => 
+                                  array (
+                                    'type' => 'box',
+                                    'layout' => 'horizontal',
+                                    'contents' => 
+                                    array (
+                                      0 => 
+                                      array (
+                                        'type' => 'button',
+                                        'action' => 
+                                        array (
+                                          'type' => 'message',
+                                          'label' => 'BENAR',
+                                          'text' => 'benar',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                        array_push($messages,$msg1,$msg2);
+                        $output=$this->reply($replyToken,$messages);
                       }
                   }else 
                   // Q5 FINAL
@@ -152,7 +788,8 @@ class Bot extends MY_Controller {
                         'tipe'=>$explodeRequest[3],
                         'jumlah_lantai'=>$explodeRequest[2],
                         'style_arsitektur'=>$explodeRequest[1],
-                        'luas_bangunan'=>$explodeRequest[0]
+                        'luas_bangunan'=>$explodeRequest[0],
+                        'status_rumah' => 'tersedia'
                       );
                       $getDataRumah=$this->Dbs->getdata($whereData,'rumah');
                       $itemsRumah=[];//memasukan item rumah kedalam carousel
@@ -296,8 +933,169 @@ class Bot extends MY_Controller {
                       $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                       if($sql){
                         $explodeRequest=explode("#",$dataUser->request);
-                        $pre=array($messageBuilder->text("Ulangi ya, \nMau beli rumah tipe jenis apa nih?"));
-                        $output=$this->reply($replyToken,$pre);
+                        $messages=[];
+                  $msg1=$messageBuilder->text("Mau beli rumah tipe jenis apa nih?");
+                  $msg2=array (
+                        'type' => 'flex',
+                        'altText' => 'Flex Message',
+                        'contents' => 
+                        array (
+                          'type' => 'carousel',
+                          'contents' => 
+                          array (
+                            0 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 36',
+                                      'text' => 'Tipe 36',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            1 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 45',
+                                      'text' => 'Tipe 45',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            2 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 60',
+                                      'text' => 'Tipe 60',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            3 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Rumah',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => 'Tipe 70',
+                                      'text' => 'Tipe 70',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                  array_push($messages,$msg1,$msg2);
+                  $output=$this->reply($replyToken,$messages);
                       }
                     }
                   }
