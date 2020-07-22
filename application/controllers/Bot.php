@@ -79,7 +79,9 @@ class Bot extends MY_Controller {
                 }
             }
             if($dataUser->map == 'registrasi_tlp' && $dataUser->counter == '1'){
-              if (is_numeric($message['text'])) {
+              $panjangAngka = strlen($message['text']);
+              $needAngka = is_numeric($message['text']);
+              if ($needAngka and $panjangAngka == 11 or $panjangAngka == 12 or $panjangAngka == 13) {
                 $dataUpdate = array(
                       'no_telepon' => $message['text'],
                       'map'   => 'belum order',
@@ -134,7 +136,7 @@ class Bot extends MY_Controller {
                   $output=$this->reply($replyToken,$messages);
                 }
               }else{
-                $pre=array($messageBuilder->text("No telpon gagal didaftarkan"));
+                $pre=array($messageBuilder->text("No telpon yang anda masukkan adalah huruf atau angka yang dimasukkan kurang atau lebih"));
                   $output=$this->reply($replyToken,$pre);
               }
             }
@@ -716,6 +718,43 @@ class Bot extends MY_Controller {
                                 ),
                               ),
                             ),
+                            1 => 
+                            array (
+                              'type' => 'bubble',
+                              'direction' => 'ltr',
+                              'header' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'vertical',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'text',
+                                    'text' => 'Luas Bangunan',
+                                    'align' => 'center',
+                                  ),
+                                ),
+                              ),
+                              'footer' => 
+                              array (
+                                'type' => 'box',
+                                'layout' => 'horizontal',
+                                'contents' => 
+                                array (
+                                  0 => 
+                                  array (
+                                    'type' => 'button',
+                                    'action' => 
+                                    array (
+                                      'type' => 'message',
+                                      'label' => '101-200 m/2',
+                                      'text' => '101-200 m/2',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -822,7 +861,7 @@ class Bot extends MY_Controller {
                                 1 => 
                                 array (
                                   'type' => 'text',
-                                  'text' => 'Oleh : '.$key->owner,
+                                  'text' => 'Harga : '.$key->harga_desain,
                                   'margin' => 'lg',
                                   'size' => 'md',
                                   'align' => 'start',
@@ -908,24 +947,69 @@ class Bot extends MY_Controller {
                           );
                           array_push($itemsRumah,$itemRumah);
                         }
-                        
+                        $messages=[];
+                        $msg1=$messageBuilder->text("Ini rekomendasi untuk kamu");
+                        $msg2=array (
+                          'type' => 'flex',
+                          'altText' => 'Flex Message',
+                          'contents' => 
+                          array (
+                            'type' => 'carousel',
+                            'contents' => $itemsRumah
+                          ),
+                        );
+                        array_push($messages,$msg1,$msg2);
+                        $output=$this->reply($replyToken,$messages);
+                        // RESET
+                        $dataUpdate=array('map'=>'belum order','counter'=>0,'request'=>NULL);
+                        $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
+                      }else{
+                        $messages=[];
+                        $msg1=$messageBuilder->text("Desain Rumah tidak tersedia coba ketik <Mulai> untui mulai pesan desain rumah lagi");
+                        $msg2=array (
+                                'type' => 'flex',
+                                'altText' => 'Flex Message',
+                                'contents' => 
+                                array (
+                                  'type' => 'bubble',
+                                  'direction' => 'ltr',
+                                  'header' => 
+                                  array (
+                                    'type' => 'box',
+                                    'layout' => 'vertical',
+                                    'contents' => 
+                                    array (
+                                      0 => 
+                                      array (
+                                        'type' => 'text',
+                                        'text' => 'Tekan Tombol Di Bawah Ini',
+                                        'align' => 'center',
+                                      ),
+                                    ),
+                                  ),
+                                  'footer' => 
+                                  array (
+                                    'type' => 'box',
+                                    'layout' => 'horizontal',
+                                    'contents' => 
+                                    array (
+                                      0 => 
+                                      array (
+                                        'type' => 'button',
+                                        'action' => 
+                                        array (
+                                          'type' => 'message',
+                                          'label' => 'MULAI',
+                                          'text' => 'MULAI',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                        array_push($messages,$msg1,$msg2);
+                        $output=$this->reply($replyToken,$messages);
                       }
-                      $messages=[];
-                      $msg1=$messageBuilder->text("Ini rekomendasi untuk kamu");
-                      $msg2=array (
-                        'type' => 'flex',
-                        'altText' => 'Flex Message',
-                        'contents' => 
-                        array (
-                          'type' => 'carousel',
-                          'contents' => $itemsRumah
-                        ),
-                      );
-                      array_push($messages,$msg1,$msg2);
-                      $output=$this->reply($replyToken,$messages);
-                      // RESET
-                      $dataUpdate=array('map'=>'belum order','counter'=>0,'request'=>NULL);
-                      $sql=$this->Dbs->update(array('id_users'=>$userId),$dataUpdate,'users');
                     }else{
                       $counter=1;
                       $request=$message['text']."#".$dataUser->request;
